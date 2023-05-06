@@ -37,7 +37,7 @@ services:
         - "5050:80"
     volumes:
       - pgadmin_data:/root/.pgadmin 
-
+      
   portainer:
     container_name: portainer
     restart: always
@@ -47,7 +47,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
-
+      # admin
+      # admin123456789
   catalog.api:
     container_name: catalog.api
     environment:
@@ -57,6 +58,7 @@ services:
       - catalogdb
     ports:
       - "8000:80"
+
   basket.api:
     container_name: basket.api
     environment:
@@ -66,4 +68,14 @@ services:
       - basketdb
     ports:
       - "8001:80"
+
+  discount.api:
+    container_name: discount.api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - "DatabaseSettings:ConnectionString=Server=discountdb;Port=5432;Database=DiscountDb;User Id=admin;Password=admin1234;"
+    depends_on:
+      - discountdb
+    ports:
+      - "8002:80"
 
