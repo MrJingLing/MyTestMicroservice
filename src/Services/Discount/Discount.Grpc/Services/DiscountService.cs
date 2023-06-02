@@ -14,7 +14,7 @@ namespace Discount.Grpc.Services
 
         public DiscountService(ILogger<DiscountService> logger, IMapper mapper, IDiscountRepository repository)
         {
-            repository = repository ?? throw new ArgumentNullException(nameof(repository));
+            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
