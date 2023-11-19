@@ -1,16 +1,14 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Polly;
 
 namespace Ordering.API.Extensions;
 
 public static class HostExtensions
 {
     public static IHost MigrateDatabase<TContext>(this IHost host,
-        Action<TContext, IServiceProvider> seeder,
-        int? retry = 0) where TContext : DbContext
+        Action<TContext, IServiceProvider> seeder) where TContext : DbContext
     {
-        var retryForAvailability = retry.Value;
-
         using var scope = host.Services.CreateScope();
         var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<TContext>>();
@@ -20,7 +18,16 @@ public static class HostExtensions
         {
             logger.LogInformation("Migrating database associated with context {DbContextName}", typeof(TContext).Name);
 
-            InvokeSeeder(seeder, context, services);
+            var retry = Policy.Handle<SqlException>()
+                .WaitAndRetry(
+                    retryCount: 5,
+                    sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                    onRetry: (exception, retryCount, context) =>
+                    {
+                        logger.LogError($"Retry {retryCount} of {context.PolicyKey} at {context.OperationKey}, due to: {exception}.");
+                    });
+
+            retry.Execute(() => InvokeSeeder(seeder, context, services));
 
             logger.LogInformation("Migrated database associated with context {DbContextName}", typeof(TContext).Name);
         }
@@ -28,12 +35,6 @@ public static class HostExtensions
         {
             logger.LogError(ex, "An error occurred while migrating the database used on context {DbContextName}", typeof(TContext).Name);
 
-            if (retryForAvailability < 50)
-            {
-                retryForAvailability++;
-                Thread.Sleep(2000);
-                MigrateDatabase(host, seeder, retryForAvailability);
-            }
         }
 
         return host;
