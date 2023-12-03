@@ -11,7 +11,8 @@
         "ordering.api": "StartDebugging",
         "ocelotapigw": "StartDebugging",
         "shopping.aggregator": "StartDebugging",
-        "aspnetrunbasics": "StartDebugging"
+        "aspnetrunbasics": "StartDebugging",
+        "webstatus": "StartDebugging"
       }
     }
   }

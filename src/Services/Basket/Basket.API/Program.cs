@@ -2,7 +2,10 @@ using Basket.API.GrpcServices;
 using Basket.API.Repositories;
 using Common.Logging;
 using Discount.Grpc.Protos;
+using HealthChecks.UI.Client;
 using MassTransit;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -32,6 +35,12 @@ builder.Services.AddMassTransit(config =>
     {
         cfg.Host(builder.Configuration["EventBusSettings:HostAddress"]);
     });
+    config.ConfigureHealthCheckOptions(options =>
+    {
+        options.Name = "masstransit";
+        options.FailureStatus = HealthStatus.Degraded;
+        options.Tags.Add("masstransit health");
+    });
 });
 
 builder.Services.AddControllers();
@@ -41,6 +50,11 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Basket.API", Version = "v1" });
 });
+
+builder.Services.AddHealthChecks()
+    .AddRedis(builder.Configuration["CacheSettings:ConnectionString"],
+        "Redis Health",
+        HealthStatus.Degraded);
 
 var app = builder.Build();
 
@@ -54,5 +68,11 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/hc", new HealthCheckOptions()
+{
+    Predicate = _ => true,
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 app.Run();
